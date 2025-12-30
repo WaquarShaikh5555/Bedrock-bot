@@ -10,6 +10,7 @@ const OPTIONS = {
 
 let client = null
 let connecting = false
+let hasSpawned = false
 
 function log(msg) {
   console.log(`[BOT] ${msg}`)
@@ -18,6 +19,7 @@ function log(msg) {
 async function connect() {
   if (connecting) return
   connecting = true
+  hasSpawned = false
 
   try {
     log('Attempting to connect...')
@@ -26,6 +28,7 @@ async function connect() {
     client.on('spawn', () => {
       log('Connected and spawned')
       connecting = false
+      hasSpawned = true
     })
 
     client.on('disconnect', () => {
@@ -62,9 +65,9 @@ function reconnect() {
   }, 5000)
 }
 
-// WATCHDOG — catches silent dead connections
+// WATCHDOG — only triggers after first spawn
 setInterval(() => {
-  if (!client || !client.player || !client.player.entity) {
+  if (hasSpawned && (!client || !client.player || !client.player.entity)) {
     log('Watchdog triggered reconnect')
     reconnect()
   }
@@ -78,8 +81,4 @@ process.on('uncaughtException', err => {
 
 process.on('unhandledRejection', err => {
   log('Unhandled Rejection')
-  reconnect()
-})
-
-// START
-connect()
+  reconnect
