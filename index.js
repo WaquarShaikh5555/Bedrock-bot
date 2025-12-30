@@ -1,85 +1,88 @@
-const bedrock = require('bedrock-protocol')
+const bedrock = require('bedrock-protocol');
 
 const OPTIONS = {
-  host: 'brandsmp.progamer.me',
+  host: 'brandsmp.progamer.me', // your server
   port: 23737,
-  username: 'BOT_NAME_HERE', // Replace with bot gamertag
-  auth: 'microsoft',
+  username: 'Server', // bot gamertag
+  auth: 'microsoft', // keep Microsoft account logged in
   version: '1.21.130'
-}
+};
 
-let client = null
-let connecting = false
-let spawned = false // Only true once bot has successfully spawned
+let client = null;
+let connecting = false;
+let wasConnected = false; // smarter watchdog
 
 function log(msg) {
-  console.log(`[BOT] ${msg}`)
+  console.log(`[BOT] ${msg}`);
 }
 
 async function connect() {
-  if (connecting) return
-  connecting = true
+  if (connecting) return;
+  connecting = true;
 
   try {
-    log('Attempting to connect...')
-    client = bedrock.createClient(OPTIONS)
+    log('Attempting to connect...');
+    client = bedrock.createClient(OPTIONS);
 
     client.on('spawn', () => {
-      log('Connected and spawned')
-      connecting = false
-      spawned = true
-    })
+      log('Connected and spawned');
+      connecting = false;
+      wasConnected = true;
+    });
 
     client.on('disconnect', () => {
-      log('Disconnected')
-      spawned = false
-      reconnect()
-    })
+      log('Disconnected');
+      reconnect();
+    });
 
     client.on('kick', (reason) => {
-      log('Kicked: ' + JSON.stringify(reason))
-      spawned = false
-      reconnect()
-    })
+      log('Kicked: ' + JSON.stringify(reason));
+      reconnect();
+    });
 
     client.on('error', (err) => {
-      log('Error: ' + err.message)
-      spawned = false
-      reconnect()
-    })
+      log('Error: ' + err.message);
+      reconnect();
+    });
 
   } catch (e) {
-    log('Connect failed: ' + e.message)
-    spawned = false
-    reconnect()
+    log('Connect failed: ' + e.message);
+    reconnect();
   }
 }
 
+// FORCE reconnect no matter what
 function reconnect() {
-  connecting = false
-  try { if (client) client.close() } catch {}
-  client = null
-  setTimeout(connect, 5000)
+  connecting = false;
+  try { if (client) client.close(); } catch {}
+  client = null;
+
+  setTimeout(() => {
+    connect();
+  }, 5000); // reconnect after 5 seconds
 }
 
-// Watchdog triggers only after first spawn
+// SMART WATCHDOG — only triggers if previously connected
 setInterval(() => {
-  if (spawned && (!client || !client.player || !client.player.entity)) {
-    log('Watchdog triggered reconnect')
-    reconnect()
+  if (client && client.player && client.player.entity) {
+    wasConnected = true; // bot alive
+  } else if (wasConnected) {
+    log('Watchdog triggered reconnect');
+    reconnect();
+    wasConnected = false;
   }
-}, 5000)
+}, 8000); // check every 8 seconds
 
-// Never let process die
+// NEVER let process die
 process.on('uncaughtException', err => {
-  log('Uncaught Exception: ' + err.message)
-  reconnect()
-})
+  log('Uncaught Exception: ' + err.message);
+  reconnect();
+});
 
 process.on('unhandledRejection', err => {
-  log('Unhandled Rejection')
-  reconnect()
-})
+  log('Unhandled Rejection');
+  reconnect();
+});
 
 // START
-connect()
+connect();
