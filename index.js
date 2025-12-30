@@ -1,36 +1,85 @@
-const { createClient } = require('bedrock-protocol');
+const bedrock = require('bedrock-protocol')
 
-// === CONFIG ===
-const SERVER_IP = "brandsmp.progamer.me";  // replace with your PowerupStack server IP
-const SERVER_PORT = 23737;
-const BOT_NAME = "Server";
-
-// Start bot function
-function startBot() {
-  const client = createClient({
-    host: SERVER_IP,
-    port: SERVER_PORT,
-    username: BOT_NAME
-  });
-
-  // On disconnect, auto reconnect
-  client.on('disconnect', () => {
-    console.log("Disconnected! Reconnecting in 10 seconds...");
-    setTimeout(startBot, 10000);
-  });
-
-  client.on('error', err => console.log("Error:", err));
-
-  // Random movement every 5–10 min
-  setInterval(() => {
-    const dx = Math.floor(Math.random() * 3) - 1;
-    const dz = Math.floor(Math.random() * 3) - 1;
-    client.queue('move', { x: dx, y: 0, z: dz });
-    console.log("Random movement sent");
-  }, Math.floor(Math.random() * 300000) + 300000); // 5–10 min
-
-  console.log("Bot connected and running...");
+const OPTIONS = {
+  host: 'brandsmp.progamer.me', // your server
+  port: 23737,
+  username: 'Server', // bot gamertag
+  auth: 'microsoft',
+  version: '1.21.130'
 }
 
-// Start the bot
-startBot();
+let client = null
+let connecting = false
+
+function log(msg) {
+  console.log(`[BOT] ${msg}`)
+}
+
+async function connect() {
+  if (connecting) return
+  connecting = true
+
+  try {
+    log('Attempting to connect...')
+    client = bedrock.createClient(OPTIONS)
+
+    client.on('spawn', () => {
+      log('Connected and spawned')
+      connecting = false
+    })
+
+    client.on('disconnect', () => {
+      log('Disconnected')
+      reconnect()
+    })
+
+    client.on('kick', (reason) => {
+      log('Kicked: ' + JSON.stringify(reason))
+      reconnect()
+    })
+
+    client.on('error', (err) => {
+      log('Error: ' + err.message)
+      reconnect()
+    })
+
+  } catch (e) {
+    log('Connect failed: ' + e.message)
+    reconnect()
+  }
+}
+
+// FORCE reconnect no matter what
+function reconnect() {
+  connecting = false
+  try {
+    if (client) client.close()
+  } catch {}
+  client = null
+
+  setTimeout(() => {
+    connect()
+  }, 5000)
+}
+
+// WATCHDOG — catches silent dead connections
+setInterval(() => {
+  if (!client || !client.player || !client.player.entity) {
+    log('Watchdog triggered reconnect')
+    reconnect()
+  }
+}, 5000)
+
+// NEVER let process die
+process.on('uncaughtException', err => {
+  log('Uncaught Exception: ' + err.message)
+  reconnect()
+})
+
+process.on('unhandledRejection', err => {
+  log('Unhandled Rejection')
+  reconnect()
+})
+
+// START
+connect()
