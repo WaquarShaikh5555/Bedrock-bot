@@ -81,4 +81,5 @@ process.on('uncaughtException', err => {
 
 process.on('unhandledRejection', err => {
   log('Unhandled Rejection')
-  reconnect
+  reconnect()
+})
