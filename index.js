@@ -10,7 +10,6 @@ const OPTIONS = {
 
 let client = null
 let connecting = false
-let hasSpawned = false
 
 function log(msg) {
   console.log(`[BOT] ${msg}`)
@@ -19,7 +18,6 @@ function log(msg) {
 async function connect() {
   if (connecting) return
   connecting = true
-  hasSpawned = false
 
   try {
     log('Attempting to connect...')
@@ -28,7 +26,6 @@ async function connect() {
     client.on('spawn', () => {
       log('Connected and spawned')
       connecting = false
-      hasSpawned = true
     })
 
     client.on('disconnect', () => {
@@ -52,28 +49,22 @@ async function connect() {
   }
 }
 
-// FORCE reconnect no matter what
 function reconnect() {
   connecting = false
-  try {
-    if (client) client.close()
-  } catch {}
+  try { if (client) client.close() } catch {}
   client = null
-
-  setTimeout(() => {
-    connect()
-  }, 5000)
+  setTimeout(connect, 5000)
 }
 
-// WATCHDOG — only triggers after first spawn
+// Watchdog — only triggers if client is dead
 setInterval(() => {
-  if (hasSpawned && (!client || !client.player || !client.player.entity)) {
+  if (!client || !client.player || !client.player.entity) {
     log('Watchdog triggered reconnect')
     reconnect()
   }
 }, 5000)
 
-// NEVER let process die
+// Never let the process die
 process.on('uncaughtException', err => {
   log('Uncaught Exception: ' + err.message)
   reconnect()
@@ -83,3 +74,6 @@ process.on('unhandledRejection', err => {
   log('Unhandled Rejection')
   reconnect()
 })
+
+// START
+connect()
