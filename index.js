@@ -1,50 +1,32 @@
-const bedrock = require('bedrock-protocol')
-const express = require('express')
+const express = require("express");
+const ping = require("bedrock-ping");
+const config = require("./config.json");
 
-const app = express()
-app.get('/', (_, res) => res.send('Bot alive'))
-app.listen(process.env.PORT || 3000)
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-const OPTIONS = {
-  host: 'brandsmp.progamer.me',
-  port: 23737,
-  username: 'Server',
-  auth: 'microsoft',
-  version: '1.21.130'
+app.get("/", (req, res) => {
+  res.send("Bot alive");
+});
+
+app.listen(PORT, () => {
+  console.log("[WEB] Alive on port", PORT);
+});
+
+async function pingServer() {
+  try {
+    const res = await ping({
+      host: config.host,
+      port: config.port
+    });
+
+    console.log(
+      `[PING] Online | Players: ${res.playersOnline}/${res.playersMax}`
+    );
+  } catch (err) {
+    console.log("[PING] Server offline or unreachable");
+  }
 }
 
-let client
-let reconnecting = false
-
-function connect() {
-  if (reconnecting) return
-  reconnecting = true
-
-  console.log('[BOT] Connecting...')
-
-  client = bedrock.createClient(OPTIONS)
-
-  client.once('spawn', () => {
-    console.log('[BOT] Spawned successfully')
-    reconnecting = false
-  })
-
-  client.on('disconnect', () => retry())
-  client.on('error', () => retry())
-  client.on('kick', () => retry())
-}
-
-function retry() {
-  if (reconnecting) return
-  reconnecting = true
-
-  console.log('[BOT] Reconnecting in 8 seconds...')
-  try { client?.close() } catch {}
-
-  setTimeout(() => {
-    reconnecting = false
-    connect()
-  }, 8000)
-}
-
-connect()
+setInterval(pingServer, config.pingInterval);
+pingServer();

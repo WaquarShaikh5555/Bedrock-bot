@@ -1,7 +1,5 @@
 {
   "host": "brandsmp.progamer.me",
   "port": 23737,
-  "username": "Server",
-  "auth": "microsoft",
-  "version": "1.21.130"
+  "pingInterval": 30000
 }
