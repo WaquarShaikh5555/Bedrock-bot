@@ -1,88 +1,62 @@
-const bedrock = require('bedrock-protocol');
+const RakNet = require("raknet-native");
+const fs = require("fs");
+const express = require("express");
 
-const OPTIONS = {
-  host: 'brandsmp.progamer.me', // your server
-  port: 23737,
-  username: 'Server', // bot gamertag
-  auth: 'microsoft', // keep Microsoft account logged in
-  version: '1.21.130'
-};
+const config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
 
 let client = null;
-let connecting = false;
-let wasConnected = false; // smarter watchdog
+let connectedOnce = false;
+let reconnecting = false;
 
-function log(msg) {
-  console.log(`[BOT] ${msg}`);
-}
-
-async function connect() {
-  if (connecting) return;
-  connecting = true;
-
-  try {
-    log('Attempting to connect...');
-    client = bedrock.createClient(OPTIONS);
-
-    client.on('spawn', () => {
-      log('Connected and spawned');
-      connecting = false;
-      wasConnected = true;
-    });
-
-    client.on('disconnect', () => {
-      log('Disconnected');
-      reconnect();
-    });
-
-    client.on('kick', (reason) => {
-      log('Kicked: ' + JSON.stringify(reason));
-      reconnect();
-    });
-
-    client.on('error', (err) => {
-      log('Error: ' + err.message);
-      reconnect();
-    });
-
-  } catch (e) {
-    log('Connect failed: ' + e.message);
-    reconnect();
-  }
-}
-
-// FORCE reconnect no matter what
-function reconnect() {
-  connecting = false;
-  try { if (client) client.close(); } catch {}
-  client = null;
-
-  setTimeout(() => {
-    connect();
-  }, 5000); // reconnect after 5 seconds
-}
-
-// SMART WATCHDOG — only triggers if previously connected
-setInterval(() => {
-  if (client && client.player && client.player.entity) {
-    wasConnected = true; // bot alive
-  } else if (wasConnected) {
-    log('Watchdog triggered reconnect');
-    reconnect();
-    wasConnected = false;
-  }
-}, 8000); // check every 8 seconds
-
-// NEVER let process die
-process.on('uncaughtException', err => {
-  log('Uncaught Exception: ' + err.message);
-  reconnect();
+/* ===== KEEP RENDER ALIVE ===== */
+const app = express();
+app.get("/", (req, res) => res.send("Bot alive"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("[BOT] Keep-alive server running on port", PORT);
 });
+/* ============================ */
 
-process.on('unhandledRejection', err => {
-  log('Unhandled Rejection');
-  reconnect();
-});
+function connect() {
+  if (reconnecting) return;
 
-// START
+  reconnecting = true;
+  console.log("[BOT] Attempting to connect...");
+
+  client = new RakNet.Client();
+
+  client.connect(
+    config.server.host,
+    config.server.port,
+    () => {
+      connectedOnce = true;
+      reconnecting = false;
+      console.log("[BOT] Connected and spawned");
+    }
+  );
+
+  client.on("disconnect", () => {
+    console.log("[BOT] Disconnected");
+
+    // DO NOT reconnect during first Microsoft sign-in
+    if (!connectedOnce) {
+      console.log("[BOT] Waiting for first sign-in, no reconnect");
+      return;
+    }
+
+    if (!reconnecting) {
+      reconnecting = true;
+      console.log("[BOT] Reconnecting in 8 seconds...");
+      setTimeout(() => {
+        reconnecting = false;
+        connect();
+      }, config.bot.reconnectDelay);
+    }
+  });
+
+  client.on("error", err => {
+    console.log("[BOT] Error:", err.message);
+  });
+}
+
 connect();

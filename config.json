@@ -1,0 +1,10 @@
+{
+  "server": {
+    "host": "brandsmp.progamer.me",
+    "port": 23737
+  },
+  "bot": {
+    "name": "BrandBot",
+    "reconnectDelay": 8000
+  }
+}
