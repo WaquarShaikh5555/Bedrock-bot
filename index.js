@@ -1,32 +1,33 @@
 const express = require("express");
-const ping = require("bedrock-ping");
-const config = require("./config.json");
+const { statusBedrock } = require("minecraft-server-util");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// YOUR SERVER
+const HOST = "brandsmp.progamer.me";
+const PORT_MC = 23737;
+
+// keep render alive
 app.get("/", (req, res) => {
-  res.send("Bot alive");
+  res.send("Bot is alive");
 });
 
 app.listen(PORT, () => {
-  console.log("[WEB] Alive on port", PORT);
+  console.log("Web alive on port", PORT);
 });
 
-async function pingServer() {
+// ping mc server every 30 sec
+async function ping() {
   try {
-    const res = await ping({
-      host: config.host,
-      port: config.port
-    });
-
+    const res = await statusBedrock(HOST, PORT_MC);
     console.log(
-      `[PING] Online | Players: ${res.playersOnline}/${res.playersMax}`
+      `ONLINE ${res.players.online}/${res.players.max}`
     );
-  } catch (err) {
-    console.log("[PING] Server offline or unreachable");
+  } catch (e) {
+    console.log("MC server offline");
   }
 }
 
-setInterval(pingServer, config.pingInterval);
-pingServer();
+setInterval(ping, 30000);
+ping();
