@@ -1,17 +1,12 @@
 {
   "name": "bedrock-bot",
   "version": "1.0.0",
-  "description": "Minecraft Bedrock bot",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "postinstall": "npm rebuild raknet-native --build-from-source"
+    "start": "node index.js"
   },
   "dependencies": {
-    "express": "^5.2.1",
-    "raknet-native": "^1.0.0"
-  },
-  "engines": {
-    "node": "20.x"
+    "bedrock-protocol": "^3.42.0",
+    "express": "^4.19.2"
   }
 }

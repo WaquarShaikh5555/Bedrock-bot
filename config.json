@@ -1,10 +1,7 @@
 {
-  "server": {
-    "host": "brandsmp.progamer.me",
-    "port": 23737
-  },
-  "bot": {
-    "name": "BrandBot",
-    "reconnectDelay": 8000
-  }
+  "host": "brandsmp.progamer.me",
+  "port": 23737,
+  "username": "Server",
+  "auth": "microsoft",
+  "version": "1.21.130"
 }
